@@ -1,6 +1,17 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 
+const escapeXml = (s) => String(s || '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c]));
+const sampleImage = (name, w=600, h=400) => {
+  const title = escapeXml((name || 'No Image').slice(0,60));
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}' viewBox='0 0 ${w} ${h}'><rect width='100%' height='100%' fill='#f8f9fa'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-family='Arial, Helvetica, sans-serif' font-size='20' fill='#6c757d'>${title}</text></svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+};
+const getBookImage = (img, name, w=600, h=400) => {
+  if (img && (img.startsWith('http') || img.startsWith('data:'))) return img;
+  return sampleImage(name,w,h);
+};
+
 function getCookie(name) {
   const value = `; ${document.cookie}`;
   const parts = value.split(`; ${name}=`);
@@ -42,6 +53,31 @@ export default function BookDetail() {
       alert('Added to cart!');
     } else {
       alert('Failed to add to cart');
+    }
+  };
+
+  const buyBook = async () => {
+    if (!currentUser) return alert('Please login to place an order.');
+    if (!confirm('Place order for this book?')) return;
+    try {
+      const csrftoken = getCookie('csrftoken');
+      const res = await fetch('/api/order/', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken || '' },
+        body: JSON.stringify({ book: id, quantity: 1 }),
+      });
+      if (res.ok) {
+        const body = await res.json().catch(() => null) || {};
+        const recips = body.recipients ? body.recipients.join(', ') : 'seller';
+        alert(`Order sent to: ${recips}. The seller will contact you.`);
+      } else {
+        const data = await res.json().catch(() => null);
+        alert(data?.detail || 'Failed to place order');
+      }
+    } catch (err) {
+      console.error('Failed to place order', err);
+      alert('Failed to place order');
     }
   };
 
@@ -120,7 +156,7 @@ export default function BookDetail() {
       <div className="container mt-4">
         <div className="row">
           <div className="col-lg-6 mb-4">
-            <img src={book.image || 'https://via.placeholder.com/600x400?text=No+Image'} className="img-fluid rounded shadow" alt={book.name} />
+            <img src={getBookImage(book.image, book.name, 600, 400)} onError={(e)=>{e.target.onerror=null; e.target.src = getBookImage(null, book.name, 600, 400)}} className="img-fluid rounded shadow" alt={book.name} />
           </div>
           <div className="col-lg-6">
             <div className="card shadow-lg border-0">
@@ -145,7 +181,7 @@ export default function BookDetail() {
                 <div className="mt-4 d-flex gap-2 flex-wrap">
                   {!isOwner && (
                     <>
-                      <button className="btn btn-success btn-lg" onClick={() => { setMessage('Hi, I am interested in buying this book.'); setShowContact(true); }}>
+                      <button className="btn btn-success btn-lg" onClick={buyBook}>
                         <i className="bi bi-cart me-2"></i>Buy Now
                       </button>
                       <button className="btn btn-warning btn-lg" onClick={addToCart}>

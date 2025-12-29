@@ -1,6 +1,18 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
+const escapeXml = (s) => String(s || '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c]));
+const sampleImage = (name, w=300, h=200) => {
+  const title = escapeXml((name || 'No Image').slice(0,40));
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}' viewBox='0 0 ${w} ${h}'><rect width='100%' height='100%' fill='#f8f9fa'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-family='Arial, Helvetica, sans-serif' font-size='18' fill='#6c757d'>${title}</text></svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+};
+
+const getBookImage = (img, name, w=300, h=200) => {
+  if (img && (img.startsWith('http') || img.startsWith('data:'))) return img;
+  return sampleImage(name,w,h);
+};
+
 export default function Profile() {
   const [user, setUser] = useState(null);
   const [books, setBooks] = useState([]);
@@ -48,6 +60,30 @@ export default function Profile() {
     };
     fetchUserAndData();
   }, []);
+
+  const buyBook = async (bookId) => {
+    try {
+      try { await fetch('/api/auth/csrf/', { credentials: 'include' }); } catch (e) { console.warn('CSRF ensure failed', e); }
+      const csrftoken = document.cookie.split('csrftoken=')[1]?.split(';')[0];
+      const res = await fetch('/api/order/', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken || '' },
+        body: JSON.stringify({ book: bookId, quantity: 1 }),
+      });
+      const data = await res.json().catch(() => null);
+      if (res.ok) {
+        const body = data || {};
+        const recips = body.recipients ? body.recipients.join(', ') : 'seller';
+        alert(`Order sent to: ${recips}. The seller will contact you.`);
+      } else {
+        alert(data?.detail || `Failed to place order: Status ${res.status}`);
+      }
+    } catch (err) {
+      console.error('Failed to place order', err);
+      alert(`Failed to place order: ${err.message}`);
+    }
+  };
 
   if (!user) return (
     <div>
@@ -132,12 +168,18 @@ export default function Profile() {
                     {books.map(b => (
                       <div className="col-md-6 mb-3" key={b.id}>
                         <div className="card h-100 shadow-sm hover-shadow">
-                          <img src={b.image || 'https://via.placeholder.com/300x200?text=No+Image'} className="card-img-top" alt={b.name} />
+                          <img src={getBookImage(b.image, b.name, 300, 200)} onError={(e)=>{e.target.onerror=null; e.target.src = getBookImage(null, b.name, 300, 200)}} className="card-img-top" alt={b.name} />
                           <div className="card-body d-flex flex-column">
                             <h6 className="card-title fw-bold">{b.name}</h6>
                             <p className="card-text text-muted">by {b.author}</p>
                             <p className="card-text"><strong>₹{b.price}</strong></p>
-                            <Link to={`/book/${b.id}`} className="btn btn-sm btn-primary mt-auto">View Details</Link>
+                            <Link to={`/book/${b.id}`} className="btn btn-sm btn-primary mt-auto mb-2">View Details</Link>
+                            <button className="btn btn-sm btn-success w-100" onClick={() => {
+                              if (!confirm('Place order for this book?')) return;
+                              buyBook(b.id);
+                            }}>
+                              <i className="bi bi-bag-check me-1"></i>Buy Now
+                            </button>
                           </div>
                         </div>
                       </div>

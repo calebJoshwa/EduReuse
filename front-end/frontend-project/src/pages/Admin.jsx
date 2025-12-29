@@ -49,6 +49,30 @@ export default function Admin() {
     }
   }, [user]);
 
+  const buyBook = async (bookId) => {
+    try {
+      if (!confirm('Place order for this book?')) return;
+      const csrftoken = document.cookie.split('csrftoken=')[1]?.split(';')[0];
+      const res = await fetch('/api/order/', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken || '' },
+        body: JSON.stringify({ book: bookId, quantity: 1 }),
+      });
+      const data = await res.json().catch(() => null);
+      if (res.ok) {
+        const body = data || {};
+        const recips = body.recipients ? body.recipients.join(', ') : 'seller';
+        alert(`Order sent to: ${recips}.`);
+      } else {
+        alert(data?.detail || `Failed to place order: Status ${res.status}`);
+      }
+    } catch (err) {
+      console.error('Failed to place order', err);
+      alert(`Failed to place order: ${err.message}`);
+    }
+  };
+
   if (!user || !user.is_staff) {
     return (
       <div style={{backgroundColor: '#f8f9fa', minHeight: '100vh'}}>
@@ -169,7 +193,8 @@ export default function Admin() {
                             <td>{b.condition}</td>
                             <td>
                               <Link to={`/book/${b.id}`} className="btn btn-sm btn-outline-primary me-2">View</Link>
-                              <button className="btn btn-sm btn-outline-danger">Delete</button>
+                              <button className="btn btn-sm btn-outline-danger me-2">Delete</button>
+                              <button className="btn btn-sm btn-success" onClick={() => buyBook(b.id)}>Buy</button>
                             </td>
                           </tr>
                         ))}

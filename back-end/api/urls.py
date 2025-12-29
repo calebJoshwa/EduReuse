@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import test_api, BookViewSet, login_view, logout_view, current_user, get_csrf, signup_view, ContactMessageViewSet, FavoriteViewSet, CartViewSet, users_list
+from .views import test_api, BookViewSet, login_view, logout_view, current_user, get_csrf, signup_view, ContactMessageViewSet, FavoriteViewSet, CartViewSet, users_list, order_view
 
 router = DefaultRouter()
 router.register(r'books', BookViewSet, basename='book')
@@ -16,5 +16,6 @@ urlpatterns = [
     path('auth/user/', current_user),
     path('auth/csrf/', get_csrf),
     path('users/', users_list),
+    path('order/', order_view),
     path('', include(router.urls)),
 ]

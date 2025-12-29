@@ -1,6 +1,18 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
+const escapeXml = (s) => String(s || '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c]));
+const sampleImage = (name, w=300, h=200) => {
+  const title = escapeXml((name || 'No Image').slice(0,40));
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}' viewBox='0 0 ${w} ${h}'><rect width='100%' height='100%' fill='#f8f9fa'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-family='Arial, Helvetica, sans-serif' font-size='18' fill='#6c757d'>${title}</text></svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+};
+
+const getBookImage = (img, name, w=300, h=200) => {
+  if (img && (img.startsWith('http') || img.startsWith('data:'))) return img;
+  return sampleImage(name,w,h);
+};
+
 export default function Dashboard() {
   const [books, setBooks] = useState([]);
   const [search, setSearch] = useState('');
@@ -8,7 +20,14 @@ export default function Dashboard() {
   const [page, setPage] = useState(1);
   const [user, setUser] = useState(null);
   const [favorites, setFavorites] = useState([]);
+  const [pendingFavs, setPendingFavs] = useState(new Set());
   const [cartCount, setCartCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(null);
+  const [hasNext, setHasNext] = useState(false);
+  const [hasPrev, setHasPrev] = useState(false);
+
+  const addPending = (id) => setPendingFavs(prev => { const s = new Set(prev); s.add(id); return s; });
+  const removePending = (id) => setPendingFavs(prev => { const s = new Set(prev); s.delete(id); return s; });
   const pageSize = 6;
 
   useEffect(() => {
@@ -37,22 +56,44 @@ export default function Dashboard() {
     fetchCartCount();
   }, []);
 
-  // useEffect(() => {
-  //   if (user) {
-  //     const fetchFavorites = async () => {
-  //       try {
-  //         const res = await fetch('/api/favorites/', { credentials: 'include' });
-  //         if (res.ok) {
-  //           const data = await res.json();
-  //           setFavorites(data);
-  //         }
-  //       } catch (err) {
-  //         console.error('Failed to fetch favorites', err);
-  //       }
-  //     };
-  //     fetchFavorites();
-  //   }
-  // }, [user]);
+  // fetch favorites helper - used on init and to refresh after server-side conflicts
+  const fetchFavorites = async () => {
+    try {
+      // ensure CSRF cookie is set for POST/DELETE requests
+      await fetch('/api/auth/csrf/', { credentials: 'include' });
+    } catch (err) {
+      console.warn('csrf init failed', err);
+    }
+
+    try {
+      const res = await fetch('/api/favorites/', { credentials: 'include' });
+      console.log('Dashboard GET /api/favorites/ status=', res.status);
+      const data = await res.json().catch(() => null);
+      console.log('Dashboard GET /api/favorites/ body=', data);
+
+      let list = [];
+      if (Array.isArray(data)) list = data;
+      else if (data && Array.isArray(data.results)) list = data.results;
+      else if (data && data.book) list = [data];
+
+      if (list.length > 0) {
+        setFavorites(list);
+      } else {
+        setFavorites([]);
+        if (!res.ok) console.error('Failed to fetch favorites', res.status, data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch favorites', err);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchFavorites();
+    } else {
+      setFavorites([]);
+    }
+  }, [user]);
 
   useEffect(() => {
     const fetchBooks = async () => {
@@ -68,7 +109,20 @@ export default function Dashboard() {
         }
         const data = await res.json();
         // DRF paginated response: {count, next, previous, results}
-        setBooks(data.results || []);
+        const results = data.results || data || [];
+        setBooks(results || []);
+
+        // update pagination state
+        if (typeof data.count === 'number') {
+          setTotalPages(Math.max(1, Math.ceil(data.count / pageSize)));
+          setHasNext(Boolean(data.next));
+          setHasPrev(Boolean(data.previous));
+        } else {
+          // if server doesn't provide count, infer from result length
+          setHasNext(results.length === pageSize);
+          setHasPrev(page > 1);
+          setTotalPages(null);
+        }
         // set page count if needed (derived client-side)
       } catch (err) {
         console.error(err);
@@ -88,51 +142,118 @@ export default function Dashboard() {
   };
 
   const toggleFavorite = async (bookId) => {
-    const existingFav = favorites.find(f => f.book.id === bookId);
-    const isFav = !!existingFav;
-    const method = isFav ? 'DELETE' : 'POST';
-    const url = isFav ? `/api/favorites/${existingFav.id}/` : '/api/favorites/';
-    const body = isFav ? null : JSON.stringify({ book: bookId });
+    // prevent concurrent toggles
+    if (pendingFavs.has(bookId)) return;
+    addPending(bookId);
     try {
+      // ensure CSRF cookie is set
+      try { await fetch('/api/auth/csrf/', { credentials: 'include' }); } catch(e) { console.warn('CSRF ensure failed', e); }
+
+      const existingFav = favorites.find(f => f.book?.id === bookId);
+      const isFav = !!existingFav;
+      const method = isFav ? 'DELETE' : 'POST';
+      const url = isFav ? `/api/favorites/${existingFav.id}/` : '/api/favorites/';
+      const body = isFav ? null : JSON.stringify({ book: bookId });
+
       const csrftoken = document.cookie.split('csrftoken=')[1]?.split(';')[0];
+      console.log('toggleFavorite', { bookId, isFav, url, csrftoken });
       const res = await fetch(url, {
         method,
         credentials: 'include',
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken || '' },
         body,
       });
+      let data = null;
+      try { data = await res.json(); } catch (e) { data = null; }
+      console.log('toggleFavorite response', res.status, data);
+
       if (res.ok) {
         if (isFav) {
-          setFavorites(favorites.filter(f => f.id !== existingFav.id));
-        } else {
-          const data = await res.json();
-          setFavorites([...favorites, data]);
+          setFavorites(prev => prev.filter(f => f.id !== existingFav.id));
+        } else if (data) {
+          setFavorites(prev => [...prev, data]);
         }
+        window.dispatchEvent(new Event('favorites:changed'));
+      } else {
+        // if server says already in favorites, refresh list to sync state and behave idempotently
+        if (res.status === 400 && data?.detail === 'Already in favorites') {
+          console.warn('Server reports already in favorites; refreshing list silently');
+          await fetchFavorites();
+          return; // treat as success (item is already favorited)
+        }
+        const msg = data?.detail || `Status ${res.status} ${res.statusText}`;
+        alert(`Failed to toggle favorite: ${msg}`);
+        console.error('Toggle favorite failed', res.status, data);
       }
     } catch (err) {
       console.error('Failed to toggle favorite', err);
+      alert(`Failed to toggle favorite: ${err.message}`);
+    } finally {
+      removePending(bookId);
     }
   };
 
   const addToCart = async (bookId) => {
     try {
+      // ensure CSRF cookie is set
+      try { await fetch('/api/auth/csrf/', { credentials: 'include' }); } catch(e) { console.warn('CSRF ensure failed', e); }
+
       const csrftoken = document.cookie.split('csrftoken=')[1]?.split(';')[0];
+      console.log('addToCart', { bookId, csrftoken });
       const res = await fetch('/api/cart/', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken || '' },
         body: JSON.stringify({ book: bookId, quantity: 1 }),
       });
+      const data = await res.json().catch(() => null);
+      console.log('addToCart response', res.status, data);
       if (res.ok) {
-        setCartCount(cartCount + 1);
+        // fetch latest cart to ensure accurate count
+        const r2 = await fetch('/api/cart/', { credentials: 'include' });
+        if (r2.ok) {
+          const cartData = await r2.json();
+          setCartCount(Array.isArray(cartData) ? cartData.length : cartCount + 1);
+        }
         alert('Added to cart!');
       } else {
-        alert('Failed to add to cart');
+        alert(data?.detail || `Failed to add to cart: Status ${res.status}`);
       }
     } catch (err) {
       console.error('Failed to add to cart', err);
+      alert(`Failed to add to cart: ${err.message}`);
     }
   };
+
+  const buyBook = async (bookId) => {
+    try {
+      // ensure CSRF cookie is set
+      try { await fetch('/api/auth/csrf/', { credentials: 'include' }); } catch(e) { console.warn('CSRF ensure failed', e); }
+
+      const csrftoken = document.cookie.split('csrftoken=')[1]?.split(';')[0];
+      console.log('buyBook', { bookId, csrftoken });
+      const res = await fetch('/api/order/', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken || '' },
+        body: JSON.stringify({ book: bookId, quantity: 1 }),
+      });
+      const data = await res.json().catch(() => null);
+      console.log('buyBook response', res.status, data);
+      if (res.ok) {
+        const body = data || {};
+        const recips = body.recipients ? body.recipients.join(', ') : 'seller';
+        alert(`Order sent to: ${recips}. The seller will contact you.`);
+      } else {
+        alert(data?.detail || `Failed to place order: Status ${res.status}`);
+      }
+    } catch (err) {
+      console.error('Failed to place order', err);
+      alert(`Failed to place order: ${err.message}`);
+    }
+  };
+
+  const favIds = new Set(favorites.map(f => f.book?.id));
 
   return (
     <div className="dashboard-bg">
@@ -237,7 +358,7 @@ export default function Dashboard() {
             <div className="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-4" key={b.id}>
               <div className="card h-100 shadow-sm border-0 hover-card">
                 <div className="position-relative">
-                  <img src={b.image || 'https://via.placeholder.com/300x200?text=No+Image'} className="card-img-top" alt={b.name} style={{height: '200px', objectFit: 'cover'}} />
+                  <img src={getBookImage(b.image, b.name, 300, 200)} onError={(e)=>{e.target.onerror=null; e.target.src = getBookImage(null, b.name, 300, 200)}} className="card-img-top" alt={b.name} style={{height: '200px', objectFit: 'cover'}} />
                   <span className={`badge position-absolute top-0 end-0 m-2 ${
                     b.condition === 'new' ? 'bg-success' :
                     b.condition === 'like_new' ? 'bg-info' :
@@ -247,8 +368,8 @@ export default function Dashboard() {
                     {b.condition.replace('_', ' ').toUpperCase()}
                   </span>
                   {user && (
-                    <button className="btn btn-light position-absolute top-0 start-0 m-2 p-1" onClick={() => toggleFavorite(b.id)} style={{borderRadius: '50%', width: '32px', height: '32px'}}>
-                      <i className={`bi ${favorites.some(f => f.book.id === b.id) ? 'bi-heart-fill text-danger' : 'bi-heart'}`}></i>
+                    <button className="btn btn-light position-absolute top-0 start-0 m-2 p-1" onClick={() => toggleFavorite(b.id)} disabled={pendingFavs.has(b.id)} style={{borderRadius: '50%', width: '32px', height: '32px'}} aria-label={favIds.has(b.id)? 'Remove from favorites' : 'Add to favorites'}>
+                      <i className={`bi ${favIds.has(b.id) ? 'bi-heart-fill text-danger' : 'bi-heart'}`}></i>
                     </button>
                   )}
                 </div>
@@ -263,8 +384,15 @@ export default function Dashboard() {
                     <Link to={`/book/${b.id}`} className="btn btn-primary btn-sm w-100 mb-1">
                       <i className="bi bi-eye me-1"></i>View Details
                     </Link>
-                    <button className="btn btn-warning btn-sm w-100" onClick={() => addToCart(b.id)}>
+                    <button className="btn btn-warning btn-sm w-100 mb-1" onClick={() => addToCart(b.id)}>
                       <i className="bi bi-cart-plus me-1"></i>Add to Cart
+                    </button>
+                    <button className="btn btn-success btn-sm w-100" onClick={() => {
+                      if (!user) return alert('Please log in to place an order.');
+                      if (!confirm('Place order for this book?')) return;
+                      buyBook(b.id);
+                    }}>
+                      <i className="bi bi-bag-check me-1"></i>Buy Now
                     </button>
                   </div>
                 </div>
@@ -279,18 +407,30 @@ export default function Dashboard() {
               <nav>
                 <ul className="pagination shadow-sm">
                   <li className={`page-item ${page === 1 ? 'disabled' : ''}`}>
-                    <button className="page-link" onClick={() => setPage(p => Math.max(1, p - 1))}>
-                      <i className="bi bi-chevron-left"></i> Previous
-                    </button>
+                    <button className="page-link" onClick={() => setPage(1)} disabled={page === 1}>First</button>
                   </li>
+                  {page > 1 && (
+                    <li className="page-item">
+                      <button className="page-link" onClick={() => setPage(p => Math.max(1, p - 1))}>
+                        <i className="bi bi-chevron-left"></i> Previous
+                      </button>
+                    </li>
+                  )}
                   <li className="page-item active">
-                    <span className="page-link fw-bold">Page {page}</span>
+                    <span className="page-link fw-bold">Page {page}{totalPages ? ` of ${totalPages}` : ''}</span>
                   </li>
-                  <li className={`page-item`}>
-                    <button className="page-link" onClick={() => setPage(p => p + 1)}>
-                      Next <i className="bi bi-chevron-right"></i>
-                    </button>
-                  </li>
+                  {hasNext && (
+                    <li className={`page-item`}>
+                      <button className="page-link" onClick={() => setPage(p => p + 1)}>
+                        Next <i className="bi bi-chevron-right"></i>
+                      </button>
+                    </li>
+                  )}
+                  {totalPages && (
+                    <li className={`page-item ${page === totalPages ? 'disabled' : ''}`}>
+                      <button className="page-link" onClick={() => setPage(totalPages)} disabled={page === totalPages}>Last</button>
+                    </li>
+                  )}
                 </ul>
               </nav>
             </div>

@@ -12,6 +12,7 @@ function getCookie(name) {
 export default function Login() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({ username: "", password: "" });
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -98,13 +99,16 @@ export default function Login() {
                   <div className="input-group">
                     <span className="input-group-text"><i className="bi bi-lock"></i></span>
                     <input 
-                      type="password" 
+                      type={showPassword ? "text" : "password"} 
                       name="password" 
                       className="form-control" 
                       placeholder="Enter password" 
                       onChange={handleChange} 
                       required 
                     />
+                    <button type="button" className="btn btn-outline-secondary" onClick={() => setShowPassword(!showPassword)} aria-label="Toggle password visibility">
+                      <i className={showPassword ? "bi bi-eye-slash" : "bi bi-eye"}></i>
+                    </button>
                   </div>
                 </div>
                 <button type="submit" className="btn btn-primary w-100 fw-bold">Login</button>

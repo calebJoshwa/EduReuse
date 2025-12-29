@@ -1,4 +1,15 @@
 import { useEffect, useState } from "react";
+
+const escapeXml = (s) => String(s || '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c]));
+const sampleImage = (name, w=100, h=100) => {
+  const title = escapeXml((name || 'No Image').slice(0,30));
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}' viewBox='0 0 ${w} ${h}'><rect width='100%' height='100%' fill='#f8f9fa'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-family='Arial, Helvetica, sans-serif' font-size='14' fill='#6c757d'>${title}</text></svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+};
+const getBookImage = (img, name, w=100, h=100) => {
+  if (img && (img.startsWith('http') || img.startsWith('data:'))) return img;
+  return sampleImage(name,w,h);
+};
 import { Link } from "react-router-dom";
 
 function getCookie(name) {
@@ -50,6 +61,58 @@ export default function Cart() {
     if (!item.book || !item.book.price) return sum;
     return sum + (item.book.price * item.quantity);
   }, 0);
+
+  const [buying, setBuying] = useState(false);
+
+  const buyCart = async () => {
+    if (cartItems.length === 0) return alert('Your cart is empty.');
+    if (!confirm('Place order for all items in your cart?')) return;
+    setBuying(true);
+    try {
+      // ensure CSRF cookie
+      try { await fetch('/api/auth/csrf/', { credentials: 'include' }); } catch(e) { console.warn('CSRF ensure failed', e); }
+      const csrftoken = getCookie('csrftoken');
+
+      const successes = [];
+      const failures = [];
+
+      for (const item of cartItems) {
+        try {
+          const res = await fetch('/api/order/', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken || '' },
+            body: JSON.stringify({ book: item.book.id, quantity: item.quantity }),
+          });
+          const data = await res.json().catch(() => null);
+          if (res.ok) {
+            successes.push({ item, data });
+            // remove item from cart on success
+            try { await removeFromCart(item.id); } catch (e) { console.warn('Failed to remove purchased item from cart', e); }
+          } else {
+            failures.push({ item, error: data?.detail || `Status ${res.status}` });
+          }
+        } catch (err) {
+          failures.push({ item, error: err.message });
+        }
+      }
+
+      // Refresh cart to be safe
+      await fetchCart();
+
+      let msg = `${successes.length} item(s) ordered successfully.`;
+      if (successes.length > 0) {
+        const recips = Array.from(new Set(successes.flatMap(s => (s.data && s.data.recipients) || [])));
+        if (recips.length) msg += ` Orders sent to: ${recips.join(', ')}.`;
+      }
+      if (failures.length > 0) {
+        msg += ` ${failures.length} item(s) failed to order.`;
+      }
+      alert(msg);
+    } finally {
+      setBuying(false);
+    }
+  };
 
   console.log('Cart component rendered, loading:', loading, 'cartItems length:', cartItems.length, 'totalPrice:', totalPrice);
 
@@ -106,7 +169,7 @@ export default function Cart() {
                       <div className="card-body">
                         <div className="row align-items-center">
                           <div className="col-md-2">
-                            <img src={item.book.image || 'https://via.placeholder.com/100x100?text=No+Image'} className="img-fluid rounded" alt={item.book.name} />
+                            <img src={getBookImage(item.book.image, item.book.name, 100, 100)} onError={(e)=>{e.target.onerror=null; e.target.src = getBookImage(null, item.book.name, 100, 100)}} className="img-fluid rounded" alt={item.book.name} />
                           </div>
                           <div className="col-md-6">
                             <h5 className="card-title">{item.book.name}</h5>
@@ -134,8 +197,12 @@ export default function Cart() {
                   <div className="card-body">
                     <div className="d-flex justify-content-between align-items-center">
                       <h4>Total: ₹{totalPrice}</h4>
-                      <button className="btn btn-success btn-lg">
-                        <i className="bi bi-credit-card me-2"></i>Proceed to Checkout
+                      <button className="btn btn-success btn-lg" onClick={buyCart} disabled={buying}>
+                        {buying ? (
+                          <><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Processing...</>
+                        ) : (
+                          <><i className="bi bi-bag-check me-2"></i>Buy</>
+                        )}
                       </button>
                     </div>
                   </div>

@@ -25,7 +25,7 @@ export default function App() {
         <Route path="/messages" element={<Messages />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/favorites" element={<Favorites />} />
-        <Route path="/cart" element={<Cart />} />
+        <Route path="/cart" element={<Cart/>} />
         <Route path="*" element={<h1>Page Not Found</h1>} /> {/* fallback */}
       </Routes>
     </BrowserRouter>

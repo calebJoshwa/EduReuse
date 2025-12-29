@@ -1,0 +1,352 @@
+﻿[
+{
+  "model": "auth.user",
+  "pk": 2,
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$ETmpwMrQfmAdu4BliIF9HP$M7kudBOrC12ECAuXr/OhkTicyyAISxDfg4IgrUh+mVg=",
+    "last_login": "2025-12-27T06:25:01.003Z",
+    "is_superuser": true,
+    "username": "Muvendan",
+    "first_name": "",
+    "last_name": "",
+    "email": "muvendan1605@gmail.com",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2025-12-20T15:45:24.926Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 3,
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$FSIGIDX06l4hAy4M386Fnm$ZpIoq4FkBUurytmclOLu0AdmIjTP9NUpuH8ofINXPv4=",
+    "last_login": "2025-12-21T07:26:21.857Z",
+    "is_superuser": false,
+    "username": "Mukesh",
+    "first_name": "",
+    "last_name": "",
+    "email": "mukeshff1605@gmail.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2025-12-20T18:29:39.059Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 4,
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$PbRYs2HQWMnVtfpnyV1j8L$+ohURceoD5s0x691xMQeuut0XJMbwx3u+Mr0LAB/hsI=",
+    "last_login": "2025-12-27T15:31:03.148Z",
+    "is_superuser": false,
+    "username": "caleb",
+    "first_name": "",
+    "last_name": "",
+    "email": "joshwa@gmail.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2025-12-26T11:33:33.331Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "api.book",
+  "pk": 1,
+  "fields": {
+    "name": "Introduction to Algorithms",
+    "author": "Thomas H. Cormen",
+    "category": "Computer Science",
+    "condition": "good",
+    "price": "1500.00",
+    "description": "A comprehensive textbook on algorithms.",
+    "image": "https://via.placeholder.com/300x200?text=Algorithms",
+    "owner": 2,
+    "created_at": "2025-12-20T15:47:16.414Z"
+  }
+},
+{
+  "model": "api.book",
+  "pk": 2,
+  "fields": {
+    "name": "Clean Code",
+    "author": "Robert C. Martin",
+    "category": "Programming",
+    "condition": "new",
+    "price": "1200.00",
+    "description": "A handbook of agile software craftsmanship.",
+    "image": "https://via.placeholder.com/300x200?text=Clean+Code",
+    "owner": 2,
+    "created_at": "2025-12-20T15:47:16.423Z"
+  }
+},
+{
+  "model": "api.book",
+  "pk": 3,
+  "fields": {
+    "name": "The Pragmatic Programmer",
+    "author": "Andrew Hunt",
+    "category": "Programming",
+    "condition": "good",
+    "price": "1000.00",
+    "description": "Your journey to mastery.",
+    "image": "https://via.placeholder.com/300x200?text=Pragmatic+Programmer",
+    "owner": 2,
+    "created_at": "2025-12-20T15:47:16.431Z"
+  }
+},
+{
+  "model": "api.book",
+  "pk": 4,
+  "fields": {
+    "name": "Design Patterns",
+    "author": "Gang of Four",
+    "category": "Software Engineering",
+    "condition": "fair",
+    "price": "800.00",
+    "description": "Elements of reusable object-oriented software.",
+    "image": "https://via.placeholder.com/300x200?text=Design+Patterns",
+    "owner": 2,
+    "created_at": "2025-12-20T15:47:16.437Z"
+  }
+},
+{
+  "model": "api.book",
+  "pk": 5,
+  "fields": {
+    "name": "Python Crash Course",
+    "author": "Eric Matthes",
+    "category": "Programming",
+    "condition": "new",
+    "price": "900.00",
+    "description": "A hands-on, project-based introduction to programming.",
+    "image": "https://via.placeholder.com/300x200?text=Python+Crash+Course",
+    "owner": 2,
+    "created_at": "2025-12-20T15:47:16.443Z"
+  }
+},
+{
+  "model": "api.book",
+  "pk": 6,
+  "fields": {
+    "name": "Data Structures and Algorithms in Java",
+    "author": "Robert Lafore",
+    "category": "Computer Science",
+    "condition": "good",
+    "price": "1100.00",
+    "description": "A clear and concise guide to data structures.",
+    "image": "https://via.placeholder.com/300x200?text=Data+Structures",
+    "owner": 2,
+    "created_at": "2025-12-20T15:47:16.450Z"
+  }
+},
+{
+  "model": "api.book",
+  "pk": 7,
+  "fields": {
+    "name": "Head First Java",
+    "author": "Kathy Sierra",
+    "category": "Programming",
+    "condition": "good",
+    "price": "950.00",
+    "description": "A brain-friendly guide to Java programming.",
+    "image": "https://via.placeholder.com/300x200?text=Head+First+Java",
+    "owner": 2,
+    "created_at": "2025-12-20T15:47:16.455Z"
+  }
+},
+{
+  "model": "api.book",
+  "pk": 8,
+  "fields": {
+    "name": "Artificial Intelligence: A Modern Approach",
+    "author": "Stuart Russell",
+    "category": "AI",
+    "condition": "fair",
+    "price": "1800.00",
+    "description": "The leading textbook in AI.",
+    "image": "https://via.placeholder.com/300x200?text=AI+Modern+Approach",
+    "owner": 2,
+    "created_at": "2025-12-20T15:47:16.461Z"
+  }
+},
+{
+  "model": "api.book",
+  "pk": 9,
+  "fields": {
+    "name": "Atomic Habits",
+    "author": "James Clear",
+    "category": "Self Development",
+    "condition": "good",
+    "price": "499.00",
+    "description": "A practical guide to building good habits and breaking bad ones using small, proven techniques.",
+    "image": "https://m.media-amazon.com/images/I/91bYsX41DVL.jpg",
+    "owner": 2,
+    "created_at": "2025-12-20T18:27:59.382Z"
+  }
+},
+{
+  "model": "api.contactmessage",
+  "pk": 1,
+  "fields": {
+    "sender": 3,
+    "recipient": 2,
+    "book": 9,
+    "message": "Hi, I am interested in buying this book.",
+    "created_at": "2025-12-20T18:46:40.617Z"
+  }
+},
+{
+  "model": "api.contactmessage",
+  "pk": 2,
+  "fields": {
+    "sender": 3,
+    "recipient": 2,
+    "book": 9,
+    "message": "Hi, I am interested in buying this book.",
+    "created_at": "2025-12-20T18:55:23.286Z"
+  }
+},
+{
+  "model": "api.contactmessage",
+  "pk": 3,
+  "fields": {
+    "sender": 3,
+    "recipient": 2,
+    "book": 9,
+    "message": "Hi, I am interested in buying this book.",
+    "created_at": "2025-12-20T19:15:23.634Z"
+  }
+},
+{
+  "model": "api.contactmessage",
+  "pk": 4,
+  "fields": {
+    "sender": 3,
+    "recipient": 2,
+    "book": 9,
+    "message": "Hi, I am interested in buying this book.",
+    "created_at": "2025-12-20T19:19:14.360Z"
+  }
+},
+{
+  "model": "api.contactmessage",
+  "pk": 5,
+  "fields": {
+    "sender": 3,
+    "recipient": 2,
+    "book": 9,
+    "message": "Hi, I am interested in buying this book.",
+    "created_at": "2025-12-20T19:24:46.629Z"
+  }
+},
+{
+  "model": "api.contactmessage",
+  "pk": 6,
+  "fields": {
+    "sender": 4,
+    "recipient": 2,
+    "book": 9,
+    "message": "Hi, I am interested in buying this book.",
+    "created_at": "2025-12-27T05:05:52.392Z"
+  }
+},
+{
+  "model": "api.contactmessage",
+  "pk": 7,
+  "fields": {
+    "sender": 4,
+    "recipient": 2,
+    "book": 7,
+    "message": "Hi, I am interested in buying this book.",
+    "created_at": "2025-12-27T11:42:04.165Z"
+  }
+},
+{
+  "model": "api.favorite",
+  "pk": 1,
+  "fields": {
+    "user": 2,
+    "book": 9,
+    "created_at": "2025-12-20T18:28:25.896Z"
+  }
+},
+{
+  "model": "api.favorite",
+  "pk": 13,
+  "fields": {
+    "user": 4,
+    "book": 9,
+    "created_at": "2025-12-27T11:23:06.515Z"
+  }
+},
+{
+  "model": "api.profile",
+  "pk": 1,
+  "fields": {
+    "user": 3,
+    "phone": ""
+  }
+},
+{
+  "model": "api.profile",
+  "pk": 2,
+  "fields": {
+    "user": 4,
+    "phone": "12345"
+  }
+},
+{
+  "model": "api.cart",
+  "pk": 1,
+  "fields": {
+    "user": 2,
+    "book": 9,
+    "quantity": 1,
+    "added_at": "2025-12-20T18:44:08.069Z"
+  }
+},
+{
+  "model": "api.cart",
+  "pk": 2,
+  "fields": {
+    "user": 2,
+    "book": 8,
+    "quantity": 1,
+    "added_at": "2025-12-20T18:44:12.466Z"
+  }
+},
+{
+  "model": "api.cart",
+  "pk": 7,
+  "fields": {
+    "user": 3,
+    "book": 9,
+    "quantity": 1,
+    "added_at": "2025-12-20T19:14:47.017Z"
+  }
+},
+{
+  "model": "api.cart",
+  "pk": 8,
+  "fields": {
+    "user": 3,
+    "book": 8,
+    "quantity": 1,
+    "added_at": "2025-12-20T19:14:50.510Z"
+  }
+},
+{
+  "model": "api.cart",
+  "pk": 11,
+  "fields": {
+    "user": 4,
+    "book": 9,
+    "quantity": 1,
+    "added_at": "2025-12-27T11:40:25.408Z"
+  }
+}
+]

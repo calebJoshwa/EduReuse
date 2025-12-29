@@ -10,6 +10,7 @@ export default function Signup() {
     password: "",
     phone: "",
   });
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -106,7 +107,10 @@ export default function Signup() {
                   <label className="form-label fw-semibold">Password</label>
                   <div className="input-group">
                     <span className="input-group-text"><i className="bi bi-lock"></i></span>
-                    <input type="password" name="password" className="form-control" placeholder="Create a password" onChange={handleChange} required />
+                    <input type={showPassword ? "text" : "password"} name="password" className="form-control" placeholder="Create a password" onChange={handleChange} required />
+                    <button type="button" className="btn btn-outline-secondary" onClick={() => setShowPassword(!showPassword)} aria-label="Toggle password visibility">
+                      <i className={showPassword ? "bi bi-eye-slash" : "bi bi-eye"}></i>
+                    </button>
                   </div>
                 </div>
                 {error && <div className="alert alert-danger">{error}</div>}
