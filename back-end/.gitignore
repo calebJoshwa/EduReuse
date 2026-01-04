@@ -1,0 +1,8 @@
+.env
+# Local Python env
+env/
+__pycache__/
+*.pyc
+
+# Database
+db.sqlite3

@@ -1,0 +1,13 @@
+# Ignore environment files
+.env
+back-end/.env
+
+# Python
+__pycache__/
+*.pyc
+
+# Database
+back-end/db.sqlite3
+
+# Node
+front-end/frontend-project/node_modules/
